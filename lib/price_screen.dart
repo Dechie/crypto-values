@@ -1,19 +1,25 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'coin_data.dart';
+import 'constants.dart';
 import 'services.dart';
+import 'show_result.dart';
 
 class PriceScreen extends StatefulWidget {
   const PriceScreen({super.key});
 
   @override
-  _PriceScreenState createState() => _PriceScreenState();
+  State<PriceScreen> createState() => _PriceScreenState();
 }
 
 class _PriceScreenState extends State<PriceScreen> {
   String selectedCurrency = "USD", toBtc = "first";
-  double toEth = 0, toLtc = 0;
+  String toLtc = "second", toEth = "third";
+  //double toEth = 0, toLtc = 0;
+  bool btcIsLoading = false, ethIsLoading = false, ltcIsLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -22,40 +28,54 @@ class _PriceScreenState extends State<PriceScreen> {
         title: const Text('🤑 Coin Ticker'),
       ),
       body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        //mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
-            child: Card(
-              color: Colors.lightBlueAccent,
-              elevation: 5.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 15.0, horizontal: 28.0),
-                child: Text(
-                  //'1 BTC = $toBtc USD',
-                  toBtc,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20.0,
-                    color: Colors.white,
+          ShowResult(
+            child: btcIsLoading
+                ? showCircularProgress()
+                : Text(
+                    //toBtc,
+                    "1 BTC = ? $selectedCurrency",
+                    textAlign: TextAlign.center,
+                    style: resultTextStyle,
                   ),
-                ),
-              ),
-            ),
           ),
+          ShowResult(
+            child: ethIsLoading
+                ? showCircularProgress()
+                : Text(
+                    //toEth,
+                    "1 ETH = ? $selectedCurrency",
+                    textAlign: TextAlign.center,
+                    style: resultTextStyle,
+                  ),
+          ),
+          ShowResult(
+            child: ltcIsLoading
+                ? showCircularProgress()
+                : Text(
+                    //toLtc,
+                    "1 LTC = ? $selectedCurrency",
+                    textAlign: TextAlign.center,
+                    style: resultTextStyle,
+                  ),
+          ),
+          const Spacer(),
           Container(
             height: 150.0,
             alignment: Alignment.center,
             padding: const EdgeInsets.only(bottom: 30.0),
-            color: Colors.lightBlue,
+            decoration: const BoxDecoration(
+              color: Colors.lightBlue,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(25),
+                topRight: Radius.circular(25),
+              ),
+            ),
             //child: dropDownAndroid(),
-            //child: Platform.isIOS ? cupertinoPicker() : dropDownAndroid(),
-            child: cupertinoPicker(),
+            child: Platform.isIOS ? cupertinoPicker() : dropDownAndroid(),
+            //child: cupertinoPicker(),
           ),
         ],
       ),
@@ -74,7 +94,10 @@ class _PriceScreenState extends State<PriceScreen> {
       },
       children: currenciesList
           .map(
-            (curr) => Text(curr),
+            (curr) => Text(
+              curr,
+              style: const TextStyle(color: commonDropDownBlue),
+            ),
           )
           .toList(),
     );
@@ -87,7 +110,13 @@ class _PriceScreenState extends State<PriceScreen> {
           .map<DropdownMenuItem<String>>(
             (curr) => DropdownMenuItem(
               value: curr,
-              child: Text(curr),
+              child: Text(
+                curr,
+                style: const TextStyle(
+                  color: commonDropDownBlue,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           )
           .toList(),
@@ -103,11 +132,34 @@ class _PriceScreenState extends State<PriceScreen> {
 
   void fetchConversionValues() async {
     Api api = Api();
-    String finalValue =
+    btcIsLoading = true;
+    ethIsLoading = true;
+    ltcIsLoading = true;
+    String finalValue1 =
         await api.getConversion(crypto: "BTC", fiat: selectedCurrency);
     setState(() {
-      toBtc = finalValue;
+      btcIsLoading = false;
+      toBtc = finalValue1;
     });
+
+    String finalValue2 =
+        await api.getConversion(crypto: "ETH", fiat: selectedCurrency);
+    setState(() {
+      ethIsLoading = false;
+      toEth = finalValue2;
+    });
+
+    String finalValue3 =
+        await api.getConversion(crypto: "LTC", fiat: selectedCurrency);
+    setState(() {
+      ltcIsLoading = false;
+      toLtc = finalValue3;
+    });
+
     print(toBtc);
   }
+
+  Center showCircularProgress() => const Center(
+        child: CircularProgressIndicator(color: commonDarkBlue),
+      );
 }
