@@ -16,11 +16,12 @@ class PriceScreen extends StatefulWidget {
 }
 
 class _PriceScreenState extends State<PriceScreen> {
-  String selectedCurrency = "USD", toBtc = "first";
-  String toLtc = "second", toEth = "third";
-  //double toEth = 0, toLtc = 0;
-  bool btcIsLoading = false, ethIsLoading = false, ltcIsLoading = false;
-
+  String selectedCurrency = "USD";
+  int toBtc = 0, toEth = 0, toLtc = 0;
+  List<double> conversionResults = List.generate(3, (i) => 0.0);
+  List<Map<String, dynamic>> allData = [];
+  // [{} btc, {} eth, {} ltc]
+  bool isLoading = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,37 +32,19 @@ class _PriceScreenState extends State<PriceScreen> {
         //mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          ShowResult(
-            child: btcIsLoading
+          Expanded(
+            child: isLoading
                 ? showCircularProgress()
-                : Text(
-                    //toBtc,
-                    "1 BTC = ? $selectedCurrency",
-                    textAlign: TextAlign.center,
-                    style: resultTextStyle,
+                : ListView.builder(
+                    itemCount: 3,
+                    itemBuilder: (context, index) => ShowResult(
+                      child: Text(
+                          textAlign: TextAlign.center,
+                          style: resultTextStyle,
+                          "1 ${cryptoList[index]} = ${conversionResults[index]} $selectedCurrency"),
+                    ),
                   ),
           ),
-          ShowResult(
-            child: ethIsLoading
-                ? showCircularProgress()
-                : Text(
-                    //toEth,
-                    "1 ETH = ? $selectedCurrency",
-                    textAlign: TextAlign.center,
-                    style: resultTextStyle,
-                  ),
-          ),
-          ShowResult(
-            child: ltcIsLoading
-                ? showCircularProgress()
-                : Text(
-                    //toLtc,
-                    "1 LTC = ? $selectedCurrency",
-                    textAlign: TextAlign.center,
-                    style: resultTextStyle,
-                  ),
-          ),
-          const Spacer(),
           Container(
             height: 150.0,
             alignment: Alignment.center,
@@ -90,7 +73,7 @@ class _PriceScreenState extends State<PriceScreen> {
         setState(() {
           selectedCurrency = currenciesList[selectedIndex];
         });
-        fetchConversionValues();
+        fetchSpecificValues();
       },
       children: currenciesList
           .map(
@@ -123,43 +106,61 @@ class _PriceScreenState extends State<PriceScreen> {
       onChanged: (value) {
         setState(() {
           selectedCurrency = value!;
+          print(selectedCurrency);
         });
-
-        fetchConversionValues();
+        fetchSpecificValues();
       },
     );
   }
 
   void fetchConversionValues() async {
     Api api = Api();
-    btcIsLoading = true;
-    ethIsLoading = true;
-    ltcIsLoading = true;
-    String finalValue1 =
-        await api.getConversion(crypto: "BTC", fiat: selectedCurrency);
-    setState(() {
-      btcIsLoading = false;
-      toBtc = finalValue1;
-    });
 
-    String finalValue2 =
-        await api.getConversion(crypto: "ETH", fiat: selectedCurrency);
     setState(() {
-      ethIsLoading = false;
-      toEth = finalValue2;
+      isLoading = true;
     });
+    var results = await api.getConversion();
+    allData = results;
+    fetchConversionValues();
 
-    String finalValue3 =
-        await api.getConversion(crypto: "LTC", fiat: selectedCurrency);
     setState(() {
-      ltcIsLoading = false;
-      toLtc = finalValue3;
+      isLoading = false;
     });
-
-    print(toBtc);
   }
 
-  Center showCircularProgress() => const Center(
-        child: CircularProgressIndicator(color: commonDarkBlue),
+  void fetchSpecificValues() {
+    String lookupValue = selectedCurrency.toLowerCase();
+    for (int i = 0; i < 3; i++) {
+      conversionResults[i] = allData[i][lookupValue].toDouble();
+      // allData => ['btc': {}, 'eth': {}, 'ltc': {}]
+      // allData[0][usd] => btc['usd']
+      print("value $i: ${conversionResults[i]}");
+    }
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchConversionValues();
+  }
+
+  Center showCircularProgress() => Center(
+        child: SizedBox(
+          height: 300,
+          width: 300,
+          child: Column(
+            children: [
+              Text(
+                "Fetching Conversion Values",
+                style: resultTextStyle.copyWith(
+                  color: Colors.lightBlue,
+                ),
+              ),
+              const SizedBox(height: 30),
+              const CircularProgressIndicator(color: Colors.lightBlue),
+            ],
+          ),
+        ),
       );
 }
